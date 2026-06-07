@@ -195,57 +195,33 @@ const feelingVerses = {
   'Struggling': ["Galatians 6:9", "James 1:2-3", "Romans 5:3-4", "John 16:33", "James 1:12", "1 Corinthians 10:13", "2 Corinthians 4:8-9", "Romans 12:12", "1 Peter 5:10", "Psalm 34:19", "2 Chronicles 4:17", "Matthew 11:28", "Isaiah 43:2", "Proverbs 3:5-6", "Romans 8:28", "Philippians 1:6", "Joshua 1:9", "Psalm 55:22", "2 Chronicles 20:15", "Hebrews 12:1"]
 };
 
+const BIBLE_API_URL = 'https://esv.org';
+const BIBLE_API_KEY = 'b40eac1061c96b9e01a2e0a8570430b541f4a253';
+
 async function fetchVerse(ref) {
-  try {
-    const res = await fetch(`${BIBLE_API_URL}?q=${encodeURIComponent(ref)}&include-passage-references=true&include-footnotes=false&include-headings=false`, {
-      headers: { 'Authorization': `Token ${BIBLE_API_KEY}` }
-    });
-    const data = await res.json();
-    return data.passages || "Verse not found.";
-  } catch {
-    return "Error loading verse.";
-  }
-}
+    try {
+        // 2. Build the full target request URL for the ESV server
+        const targetUrl = `${BIBLE_API_URL}?q=${encodeURIComponent(ref)}&include-passage-references=true&include-footnotes=false&include-headings=false`;
+        
+        // 3. Wrap it in a public proxy to bypass browser security blocks
+        const proxyUrl = 'https://corsproxy.io?' + encodeURIComponent(targetUrl);
 
-async function handleFeeling(feeling, btn) {
-  document.querySelectorAll('.feeling-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  
-  const display = document.getElementById('suggested-display');
-  display.style.display = 'block';
-  
-  let html = `<p style="font-size:0.75rem; margin-bottom:10px; color:#ffffff; font-weight:bold;">CHOOSE A VERSE:</p><div class="verse-chip-container">`;
-  feelingVerses[feeling].forEach(ref => {
-    html += `<button class="verse-chip" onclick="loadChipVerse('${ref}')">${ref}</button>`;
-  });
-  html += `</div><div id="chip-content" style="margin-top:15px; border-top:1px solid rgba(255,255,255,0.2); padding-top:10px; display:none;"></div>`;
-  display.innerHTML = html;
+        const res = await fetch(proxyUrl, {
+            headers: {
+                'Authorization': `Token ${BIBLE_API_KEY}`
+            }
+        });
+        
+        const data = await res.json();
+        
+        // The ESV API returns passages as an array of strings, so we join them
+        if (data.passages && data.passages.length > 0) {
+            return data.passages.join('');
+        } else {
+            return "Verse not found.";
+        }
+    } catch (error) {
+        console.error(error); // Logs details to the inspect panel if debugging
+        return "Error loading verse.";
+    }
 }
-
-async function loadChipVerse(ref) {
-  const area = document.getElementById('chip-content');
-  area.style.display = 'block';
-  area.innerHTML = '<i>Loading...</i>';
-  const text = await fetchVerse(ref);
-  area.innerHTML = `<strong>${ref}</strong><br><br>${text}`;
-}
-
-async function searchVerse() {
-  const ref = document.getElementById('verse-ref').value;
-  const display = document.getElementById('search-display');
-  if(!ref) return;
-  display.style.display = 'block';
-  display.innerHTML = '<i>Searching...</i>';
-  const text = await fetchVerse(ref);
-  display.innerHTML = text;
-}
-
-/* ========================================================
-   NEW JAVASCRIPT FUNCTION ADDED HERE
-   ======================================================== */
-function sendBackToCanva() {
-  window.top.location.href = "https://sobrietydaily.com";
-}
-</script>
-</body>
-</html>
